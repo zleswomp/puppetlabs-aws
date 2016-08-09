@@ -58,5 +58,10 @@ Puppet::Type.newtype(:iam_policy_attachment) do
   end
 
   newproperty(:arn)
-  newparam(:exclusive)
+  newparam(:exclusive) do
+    desc 'Enable exclusivity to remove attachments not requested'
+    validate do |value|
+      fail Puppet::Error, 'The exclusive parameter is boolean' if value.class != true.class or value.class != false.class
+    end
+  end
 end

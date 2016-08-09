@@ -42,9 +42,9 @@ Puppet::Type.type(:iam_policy_attachment).provide(:v2, :parent => PuppetX::Puppe
         policy_arn: policy.arn,
       })
 
-      user_names = response.policy_users.collect {|user| user.user_name }
-      group_names = response.policy_groups.collect {|group| group.group_name }
-      role_names = response.policy_roles.collect {|role| role.role_name }
+      user_names = response.policy_users.collect {|user| user.user_name } || []
+      group_names = response.policy_groups.collect {|group| group.group_name } || []
+      role_names = response.policy_roles.collect {|role| role.role_name } || []
 
       new({
         name: policy.policy_name,
