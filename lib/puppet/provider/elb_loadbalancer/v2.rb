@@ -5,7 +5,7 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
 
   mk_resource_methods
 
-  def self.instances
+  def self.instances(ref_catalog=nil)
     regions.collect do |region|
       retries = 0
       begin
@@ -33,9 +33,53 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     end.flatten
   end
 
+  def self.instances_lite
+    load_balancers = []
+    regions.collect do |region|
+      region_client = elb_client(region)
+      region_client.describe_load_balancers.each do |response|
+        response.data.load_balancer_descriptions.collect do |lb|
+          lb_hash = {
+            name: lb.load_balancer_name,
+            ensure: :present,
+            region: region,
+            availability_zones: lb.availability_zones,
+            #instances: instance_names,
+            #listeners: listeners,
+            health_check: health_check,
+            #tags: tags,
+            #subnets: subnet_names,
+            #security_groups: security_group_names,
+            scheme: lb.scheme,
+            dns_name: lb.dns_name,
+          }
+          load_balancers << lb_hash
+        end
+      end
+    end
+
+    load_balancers.map do |lb|
+      new(lb)
+    end
+  end
+
   read_only(:region, :scheme, :listeners, :tags, :dns_name)
 
   def self.prefetch(resources)
+    require 'pp'
+    #resources.each {|rec|
+    #  rec.each {|r|
+    #    pp r.class
+    #  }
+    #}
+    pp (resources.values.first.methods - Object.methods).sort
+    pp resources.values.first.to_hash
+    pp (resources.values.first.catalog.methods - Object.methods).sort
+    #pp resources.values.first.catalog.resource('Ec2_securitygroup[hacz]')
+
+    #pp resources.class
+    #pp (resources.methods - Object.methods).sort
+
     instances.each do |prov|
       if resource = resources[prov.name]  # rubocop:disable Lint/AssignmentInCondition
         resource.provider = prov
@@ -43,9 +87,7 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
     end
   end
 
-  def self.load_balancer_to_hash(region, load_balancer)
-    instance_ids = load_balancer.instances.map(&:instance_id)
-
+  def self.ec2_instance_ids_to_names(instance_ids)
     instance_names = []
     unless instance_ids.empty?
       instances = ec2_client(region).describe_instances(instance_ids: instance_ids).collect do |response|
@@ -61,6 +103,12 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
         instance_names << name if name
       end
     end
+  end
+
+  def self.load_balancer_to_hash(region, load_balancer)
+
+    instance_ids = load_balancer.instances.map(&:instance_id)
+    instance_names = ec2_instance_ids_to_names(instance_ids)
 
     listeners = load_balancer.listener_descriptions.collect do |listener|
       result = {
