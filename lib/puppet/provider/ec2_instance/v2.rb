@@ -57,6 +57,8 @@ Puppet::Type.type(:ec2_instance).provide(:v2, :parent => PuppetX::Puppetlabs::Aw
 
   def self.instance_to_hash(region, instance, subnets)
     name = name_from_tag(instance)
+    Puppet.debug("Generating ec2_instance hash for #{name}")
+
     return {} unless name
     tags = {}
     subnet_name = nil

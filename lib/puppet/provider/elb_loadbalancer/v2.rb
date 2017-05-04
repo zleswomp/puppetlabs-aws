@@ -230,6 +230,7 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
   end
 
   def self.load_balancer_policies(load_balancer_name, policy_names)
+    Puppet.debug("Calling elb_client to resolve ELB policy: #{load_balancer_name}")
     results = elb_client.describe_load_balancer_policies(
       load_balancer_name: load_balancer_name,
       policy_names: policy_names
@@ -259,6 +260,7 @@ Puppet::Type.type(:elb_loadbalancer).provide(:v2, :parent => PuppetX::Puppetlabs
   #
   def self.load_balancer_policy_types
     unless @load_balancer_policy_types
+      Puppet.debug('Calling elb_client to resolve ELB policy types')
       results = elb_client.describe_load_balancer_policy_types
       @load_balancer_policy_types = results.policy_type_descriptions
     end
